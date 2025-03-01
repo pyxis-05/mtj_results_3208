@@ -1,0 +1,231 @@
+---
+title: "mtj_plots"
+author: "Trisha Shukla"
+date: "2025-02-28"
+output: html_document
+---
+
+```{r}
+# import necessary libraries 
+library(readr)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r}
+mtj <- read_csv("mtj_py.csv") # loading the dataset into R
+view(mtj) # viewing the table 
+```
+
+```{r}
+# filtering the data into three different objects, each of which is categorised based on one aromatic residue in aro_res (phenylalanine, tyrosine, tryptophan)
+
+phe <- mtj %>% 
+  filter(str_detect(aro_res, "F"))
+phe
+
+tyr <- mtj %>% 
+  filter(str_detect(aro_res, "Y"))
+tyr
+
+trp <- mtj %>% 
+  filter(str_detect(aro_res, "W"))
+trp
+
+```
+
+```{r}
+# counting the total number of residues for each aromatic residue group (F, Y, W) 
+
+count_phe <- nrow(phe)
+count_tyr <- nrow(tyr)
+count_trp <- nrow(trp)
+
+# combining into single df 
+
+freq_aro <- data.frame(
+  group = c("PHE", "TYR", "TRP"), 
+  count = c(count_phe, count_tyr, count_trp)
+)
+
+# reordering the data 
+freq_aro$group <- factor(freq_aro$group, levels = c("PHE", "TYR", "TRP"))
+
+# plotting a bar plot to represent frequency of each aromatic residue 
+
+p1 <- ggplot(freq_aro, aes(x = group, y = count, fill = group)) + 
+  geom_bar(stat = "identity") + 
+  labs(
+    x = "", y = "Number of MTJs"
+  ) + 
+  theme_classic() + 
+  scale_fill_manual(values = c("PHE" = "royalblue2", "TYR" = "firebrick2", "TRP" = "seagreen2")) + 
+  theme(
+    legend.title = element_blank(), 
+    legend.position = "right", 
+    axis.text.x = element_blank(), 
+    axis.ticks.x = element_blank(), 
+    axis.line = element_line(size = 0.5, color = "black")
+  ) + 
+  scale_y_continuous(
+    breaks = seq(0, max(freq_aro$count), by = 45)
+  )
+  
+p1 
+# saving the plot 
+ggsave("freq_mtj.png", plot = p1)
+```
+
+Next, a plot showing the distribution of chi1 and chi2 angles was created: 
+
+```{r}
+mtj_fixed <- mtj %>% 
+  mutate(res_type = substr(aro_res, 1,1)) # creates an additional column with residue type listed specifically as F, W, or Y. 
+
+head(mtj_fixed) 
+
+install.packages("openxlsx")
+library(openxlsx)
+openxlsx::write.xlsx(mtj_fixed, "mtj_fixed.xlsx", rowNames=TRUE)
+```
+
+```{r}
+# now we plot !!! 
+
+mtj_fixed$res_type <- factor(mtj_fixed$res_type, levels = c("F", "W", "Y"))
+
+library(ggh4x)
+
+p <- ggplot(mtj_fixed, aes(x = chi1, y = chi2, colour = res_type)) +
+  geom_point(size = 0.8) +
+  labs(x = "chi2(º)", y = "chi1(º)") +
+  theme(axis.line = element_line(colour = "black")) +
+  coord_axes_inside(labels_inside = TRUE) + 
+  scale_x_continuous(breaks = c(-80,-60,-40,-20, 20, 40, 60, 80)) + 
+  scale_y_continuous(breaks = c(-120, -90,-60,-30,30,60,90,120)) +
+  scale_color_manual(values = c("F" = "royalblue2","W" = "seagreen2", "Y" = "firebrick2")) + 
+  guides(color = guide_legend(title = NULL, override.aes = list(shape = 16, size = 4))) + 
+  theme_classic()
+p
+# saving the plot 
+ggsave("angles_distribution.png", plot = p)
+```
+
+The next plot would be the distribution of distances (creating a density plot or histogram for the three different residues?)
+
+```{r}
+library(ggplot2)
+
+p2 <- ggplot(mtj_fixed, aes(x = distance, fill = res_type)) + 
+  geom_density(alpha = 0.5) + 
+  labs(x = "Distance (Å)", y = "Density") + 
+  scale_x_continuous(breaks = seq(1, 6, by = 0.25)) +
+  scale_fill_manual(values = c("F" = "royalblue2", "Y" = "firebrick2", "W" = "seagreen2")) + 
+   guides(fill = guide_legend(title = NULL)) + 
+   theme_classic() 
+p2
+
+# saving the plot 
+ggsave("distance_mtj.png", plot = p2)
+```
+Furthermore, the dataset was modified to contain the organism name for each accession ID: 
+
+```{r}
+mtj_edited <- read_csv("mtj_fixed_1.csv") # importing the modified dataset containing passenger domain type for each ID
+mtj_edited
+```
+```{r}
+bacteria <- read_csv("organism_list.csv") # importing names of organisms associated with each ID
+bacteria
+```
+
+```{r}
+mtj_final <- merge(mtj_edited, bacteria, by = "accession_ID", all.x = TRUE) # merges mtj_edited with bacteria based on accession ID 
+
+view(mtj_final)
+```
+
+```{r}
+nrow(mtj)
+nrow(mtj_final)
+```
+```{r}
+library(dplyr)
+
+mean_mtj_per_PD <- mtj_final %>% 
+  group_by(PD_type, accession_ID) %>%
+  summarise(pair_count = n()) %>%
+  group_by(PD_type) %>%
+  summarise(mean_mtj = mean(pair_count))
+
+print(mean_mtj_per_PD)
+```
+```{r}
+library(ggpattern) # loading required package
+
+mean_mtj_per_PD$fill_color <- ifelse(mean_mtj_per_PD$PD_type == "TcfA-TynE", "goldenrod2", "lightgray")
+
+pd <- ggplot(mean_mtj_per_PD, aes(x = mean_mtj, y = PD_type, fill = fill_color)) + 
+  geom_bar(stat = "identity", width = 0.7, size = 1, show.legend = FALSE, color = "black") +
+  scale_x_continuous(expand = c(0, 0), breaks = seq(0, 10, by = 0.5), limits = c(0, 10), labels = function(x) ifelse(x %% 1 == 0, as.character(x), paste0(x))) +
+  labs(x = "Frequency of MTJs per AT", y = "Passenger Domain Type") + 
+  scale_fill_identity() +
+  theme_classic() 
+
+pd
+
+ggsave("pd_freq.png", plot = pd, width = 8, height = 6, dpi = 300)
+```
+
+Now we do this whole thing all over again, but for beta-barrel domain function/type: 
+
+```{r}
+at_function <- read_csv("beta_barrel_function.csv") # importing names of organisms associated with each ID
+at_function
+
+mtj_at <- merge(mtj_final, at_function, by = "accession_ID", all.x = TRUE) 
+
+mtj_at <- mtj_at %>% rename (p_annotation = `description/protein_annotation`)
+view(mtj_at)
+```
+
+```{r}
+library(dplyr)
+
+mean_mtj_per_pa <- mtj_at %>% 
+  group_by(p_annotation, accession_ID) %>%
+  summarise(pair_count = n()) %>%
+  group_by(p_annotation) %>%
+  summarise(av_mtj = mean(pair_count))
+
+print(mean_mtj_per_pa)
+```
+
+```{r}
+library(ggpattern) # loading required package
+
+rm(mtj_beta)
+rm(mean_mtj_per_bb)
+range(mean_mtj_per_pa$av_mtj)
+```
+
+```{r}
+
+mean_mtj_per_pa$fill_color <- ifelse(mean_mtj_per_pa$p_annotation %in% c("autotransporter YapB", "autotransporter adhesin EhaB"), "chosen", "other")
+
+p4 <- ggplot(mean_mtj_per_pa, aes(x = av_mtj, y = p_annotation, fill = fill_color)) + 
+  geom_bar(stat = "identity", width = 0.7, size = 0.5, show.legend = FALSE, color = "black") +
+  scale_x_continuous(expand = c(0, 0), breaks = seq(0, 10, by = 0.5),limits = c(0, 10), labels = function(x) ifelse(x %% 1 == 0, as.character(x), paste0(x))) +
+  scale_fill_manual(values = c("chosen" = "goldenrod2", "other" = "lightgray")) +
+  labs(x = "Frequency of MTJs per AT", y = "Protein annotation") + 
+  theme_classic() + 
+  theme(
+    axis.text.y = element_text(size = 5, angle = 0, hjust = 1, vjust = 0.5, margin = margin(r = 5)) # Add margin to y-axis text
+  )
+
+p4
+
+ggsave("at_type_freq.png", plot = p4, width = 8, height = 6, dpi = 300)
+```
+
