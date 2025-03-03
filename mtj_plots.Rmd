@@ -282,7 +282,7 @@ mean_count_by_genus$fill_color <- ifelse(mean_count_by_genus$genus == "Photorhab
 
 mean_mtj_genus <- ggplot(mean_count_by_genus, aes(y = genus, x = mean_aro_count_per_AT, fill = fill_color)) + 
   geom_bar(stat = "identity", show.legend = FALSE, color = "black", width = 0.7) + 
-  labs(y = "Genus", x = "Mean Number of Aromatic Residues per AT") + 
+  labs(y = "Genus", x = "Mean Number of MTJs per AT") + 
   theme_classic() + 
   theme(axis.text.y = element_text(angle = 0, hjust = 1)) + 
   scale_fill_manual(values = c("coral2", "lightgray")) + 
@@ -292,7 +292,7 @@ mean_mtj_genus
 
 # saving the plot 
 
-ggsave("genus.png", plot = strands, width = 8, height = 6, dpi = 300)
+ggsave("genus.png", plot = mean_mtj_genus, width = 8, height = 6, dpi = 300)
 ```
 
 
