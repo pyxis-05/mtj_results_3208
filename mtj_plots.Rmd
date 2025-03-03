@@ -289,6 +289,10 @@ mean_mtj_genus <- ggplot(mean_count_by_genus, aes(y = genus, x = mean_aro_count_
   scale_x_continuous(expand = c(0, 0), breaks = seq(0, 10, by = 0.5),limits = c(0, 10), labels = function(x) ifelse(x %% 1 == 0, as.character(x), paste0(x)))
 
 mean_mtj_genus
+
+# saving the plot 
+
+ggsave("genus.png", plot = strands, width = 8, height = 6, dpi = 300)
 ```
 
 
