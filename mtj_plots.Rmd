@@ -248,8 +248,48 @@ strands <- ggplot(mtj_at, aes(x = factor(n_strand_aro), fill = res_type)) +
   ) + 
   guides(fill = guide_legend(title = NULL))
 strands
+
+ggsave("strands.png", plot = strands, width = 8, height = 6, dpi = 300)
 ```
 
+Visualising plot(s) based on genus/species: 
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+# extracting the genus from the organism column 
+mtj_organism <- mtj_at %>% 
+  mutate(genus = sapply(strsplit(as.character(organism), " "), `[`, 1))
+
+# count the number of aromatic residues (aro_res) for each accession id per genus
+
+count_mtj <- mtj_organism %>% 
+  group_by(genus, accession_ID) %>% 
+  summarise(aro_count = n())
+
+# calculate the average number of MTJs per AT categorised by genus 
+
+mean_count_by_genus <- count_mtj %>% 
+  group_by(genus) %>% 
+  summarise(mean_aro_count_per_AT = mean(aro_count, na.rm = TRUE))
+
+mean_count_by_genus
+
+# plot the results 
+
+mean_count_by_genus$fill_color <- ifelse(mean_count_by_genus$genus == "Photorhabdus", "coral2", "lightgray") # differentiating the genus with highest number of MTJs by colour 
+
+mean_mtj_genus <- ggplot(mean_count_by_genus, aes(y = genus, x = mean_aro_count_per_AT, fill = fill_color)) + 
+  geom_bar(stat = "identity", show.legend = FALSE, color = "black", width = 0.7) + 
+  labs(y = "Genus", x = "Mean Number of Aromatic Residues per AT") + 
+  theme_classic() + 
+  theme(axis.text.y = element_text(angle = 0, hjust = 1)) + 
+  scale_fill_manual(values = c("coral2", "lightgray")) + 
+  scale_x_continuous(expand = c(0, 0), breaks = seq(0, 10, by = 0.5),limits = c(0, 10), labels = function(x) ifelse(x %% 1 == 0, as.character(x), paste0(x)))
+
+mean_mtj_genus
+```
 
 
 
