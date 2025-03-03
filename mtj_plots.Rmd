@@ -229,3 +229,35 @@ p4
 ggsave("at_type_freq.png", plot = p4, width = 8, height = 6, dpi = 300)
 ```
 
+The next plot was created to visualise the frequency of aromatic residues on each beta-barrel strand from 1 to 12: 
+
+```{r}
+# plotting distribution of aromatic residue across the 12 strands, differentiated based on type of residue 
+
+library(ggpattern)
+
+strands <- ggplot(mtj_at, aes(x = factor(n_strand_aro), fill = res_type)) + 
+  geom_bar_pattern(stat = "count", position = "dodge", pattern_density = 0.1, pattern_fill = "white", width = 0.7, color = "black", size = 0.5) + 
+  labs(x = "Beta Strand Number", y = "Number of Aromatic Residues") + 
+  scale_fill_manual(values = c("F" = "royalblue2", "W" = "seagreen2","Y" = "firebrick2")) + 
+  theme_classic() + 
+  theme(
+    axis.text.x = 
+      element_text(size = 10, angle = 0, hjust = 0.5), 
+    axis.text.y = element_text(size = 10)
+  ) + 
+  guides(fill = guide_legend(title = NULL))
+strands
+```
+
+
+
+
+
+
+
+
+
+
+
+
